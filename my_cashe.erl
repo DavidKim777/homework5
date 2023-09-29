@@ -13,13 +13,14 @@ insert(TableName, Key, Value) ->
 
  
 insert(TableName, Key, Value, ExpireTime) when is_integer(ExpireTime) ->
-    CurrentTime = os:timestamp(),
+    CurrentTime = erlang:system_time(seconds),
     ExpireAt = add_seconds(CurrentTime, ExpireTime),
+    erlang:display(ExpireAt),
     ets:insert(TableName, {Key, #cache_entry{value=Value, expire_time=ExpireAt}}).
 
  
  lookup(TableName, Key) ->
-    CurrentTime = erlang:monotonic_time(),
+    CurrentTime = erlang:system_time(seconds),
     case ets:lookup(TableName, Key) of
         [{Key, #cache_entry{value=Value, expire_time=undefined}}] ->
             {ok, Value}; 
@@ -32,7 +33,7 @@ insert(TableName, Key, Value, ExpireTime) when is_integer(ExpireTime) ->
     end.
  
 delete_obsolete(TableName) ->
-    CurrentTime = os:timestamp(),
+    CurrentTime = erlang:system_time(seconds),
     F = fun({_Key, #cache_entry{expire_time=undefined}}) -> false;
            ({_Key, #cache_entry{expire_time=ExpireTime}}) when ExpireTime =< CurrentTime -> true;
            (_) -> false
@@ -40,6 +41,5 @@ delete_obsolete(TableName) ->
     ets:delete_all_objects(TableName, F).
 
  
-add_seconds({{MegaSecs, Secs, MicroSecs}, _}, Seconds) ->
-    NewMicroSecs = MicroSecs + Seconds * 1000000,  
-    {{MegaSecs, Secs + NewMicroSecs div 1000000, NewMicroSecs rem 1000000}, undefined}.
+add_seconds( Secs, Seconds) ->
+    Secs + Seconds.
